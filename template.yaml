@@ -1,0 +1,133 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Aerospace Launch Vehicle Manufacturing Workflow
+
+Globals:
+  Function:
+    Runtime: nodejs18.x
+    Timeout: 10
+    CodeUri: lambdas/
+
+Resources:
+
+  ValidateManufacturingOrderFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: validate-manufacturing-order.handler
+
+  InspectComponentsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: inspect-components.handler
+
+  AssembleStageFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: assemble-stage.handler
+
+  RunStructuralTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: run-structural-test.handler
+
+  IntegrateAvionicsFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: integrate-avionics.handler
+
+  ConductHotFireTestFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: conduct-hot-fire-test.handler
+
+  CertifyVehicleFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: certify-vehicle.handler
+
+  ManufacturingPipeline:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Description: End-to-end launch vehicle manufacturing pipeline. Validates the manufacturing order and bill of materials, inspects all inbound components against acceptance criteria, assembles each propulsion stage, runs structural and load tests, integrates the avionics payload bay, conducts hot-fire engine testing, and issues the final vehicle certification for launch readiness.
+      DefinitionUri: statemachines/manufacturing-pipeline.asl.json
+      DefinitionSubstitutions:
+        ValidateManufacturingOrderFunctionArn: !GetAtt ValidateManufacturingOrderFunction.Arn
+        InspectComponentsFunctionArn: !GetAtt InspectComponentsFunction.Arn
+        AssembleStageFunctionArn: !GetAtt AssembleStageFunction.Arn
+        RunStructuralTestFunctionArn: !GetAtt RunStructuralTestFunction.Arn
+        IntegrateAvionicsFunctionArn: !GetAtt IntegrateAvionicsFunction.Arn
+        ConductHotFireTestFunctionArn: !GetAtt ConductHotFireTestFunction.Arn
+        CertifyVehicleFunctionArn: !GetAtt CertifyVehicleFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ValidateManufacturingOrderFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref InspectComponentsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AssembleStageFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RunStructuralTestFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref IntegrateAvionicsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ConductHotFireTestFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CertifyVehicleFunction
+
+  BulkComponentInspection:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Description: Processes a batch of manufacturing components concurrently using a Map state with a maximum concurrency of 3. Each component set is independently validated, inspected, partially assembled, and structurally tested before sub-system certification.
+      DefinitionUri: statemachines/bulk-component-inspection.asl.json
+      DefinitionSubstitutions:
+        ValidateManufacturingOrderFunctionArn: !GetAtt ValidateManufacturingOrderFunction.Arn
+        InspectComponentsFunctionArn: !GetAtt InspectComponentsFunction.Arn
+        AssembleStageFunctionArn: !GetAtt AssembleStageFunction.Arn
+        RunStructuralTestFunctionArn: !GetAtt RunStructuralTestFunction.Arn
+        CertifyVehicleFunctionArn: !GetAtt CertifyVehicleFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ValidateManufacturingOrderFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref InspectComponentsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref AssembleStageFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RunStructuralTestFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CertifyVehicleFunction
+
+  ManufacturingDefectEscalation:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Description: Escalation workflow for components that fail initial inspection or structural testing. Re-validates the manufacturing order, enforces a hold Wait for root-cause analysis, runs parallel re-inspection and structural re-testing in a Parallel state, then either certifies the reworked component or issues a formal non-conformance report.
+      DefinitionUri: statemachines/manufacturing-defect-escalation.asl.json
+      DefinitionSubstitutions:
+        ValidateManufacturingOrderFunctionArn: !GetAtt ValidateManufacturingOrderFunction.Arn
+        InspectComponentsFunctionArn: !GetAtt InspectComponentsFunction.Arn
+        RunStructuralTestFunctionArn: !GetAtt RunStructuralTestFunction.Arn
+        CertifyVehicleFunctionArn: !GetAtt CertifyVehicleFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ValidateManufacturingOrderFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref InspectComponentsFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref RunStructuralTestFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref CertifyVehicleFunction
+
+  ExpressQualityGateCheck:
+    Type: AWS::Serverless::StateMachine
+    Properties:
+      Description: Express quality gate check for incoming components. Validates the manufacturing order traceability and immediately runs dimensional and surface acceptance inspection, returning a real-time pass or hold decision to the production line.
+      DefinitionUri: statemachines/express-quality-gate-check.asl.json
+      Type: EXPRESS
+      DefinitionSubstitutions:
+        ValidateManufacturingOrderFunctionArn: !GetAtt ValidateManufacturingOrderFunction.Arn
+        InspectComponentsFunctionArn: !GetAtt InspectComponentsFunction.Arn
+      Policies:
+        - LambdaInvokePolicy:
+            FunctionName: !Ref ValidateManufacturingOrderFunction
+        - LambdaInvokePolicy:
+            FunctionName: !Ref InspectComponentsFunction

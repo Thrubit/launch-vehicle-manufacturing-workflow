@@ -1,0 +1,78 @@
+{
+  "Comment": "Manufacturing Pipeline - full launch vehicle production flow",
+  "StartAt": "ValidateManufacturingOrder",
+  "States": {
+    "ValidateManufacturingOrder": {
+      "Type": "Task",
+      "Resource": "${ValidateManufacturingOrderFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "InspectAndAssemble"
+    },
+    "InspectAndAssemble": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "InspectComponents",
+          "States": {
+            "InspectComponents": {
+              "Type": "Task",
+              "Resource": "${InspectComponentsFunctionArn}",
+              "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "AssembleStage",
+          "States": {
+            "AssembleStage": {
+              "Type": "Task",
+              "Resource": "${AssembleStageFunctionArn}",
+              "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "RunStructuralTest"
+    },
+    "RunStructuralTest": {
+      "Type": "Task",
+      "Resource": "${RunStructuralTestFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "IntegrateAvionics"
+    },
+    "IntegrateAvionics": {
+      "Type": "Task",
+      "Resource": "${IntegrateAvionicsFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "ConductHotFireTest"
+    },
+    "ConductHotFireTest": {
+      "Type": "Task",
+      "Resource": "${ConductHotFireTestFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "CertifyVehicle"
+    },
+    "CertifyVehicle": {
+      "Type": "Task",
+      "Resource": "${CertifyVehicleFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "ManufacturingFailed" }],
+      "Next": "ManufacturingSucceeded"
+    },
+    "ManufacturingSucceeded": {
+      "Type": "Succeed"
+    },
+    "ManufacturingFailed": {
+      "Type": "Fail",
+      "Error": "ManufacturingError",
+      "Cause": "Launch vehicle manufacturing workflow failed"
+    }
+  }
+}

@@ -1,0 +1,84 @@
+{
+  "Comment": "Manufacturing Defect Escalation - handle NCR and defect rework before recertification",
+  "StartAt": "SetEscalationMetadata",
+  "States": {
+    "SetEscalationMetadata": {
+      "Type": "Pass",
+      "Parameters": {
+        "escalationId.$": "States.Format('NCR-ESC-{}', $$.Execution.Name)",
+        "defectCategory.$": "$.defectCategory",
+        "originalOrder.$": "$",
+        "escalatedAt.$": "$$.Execution.StartTime"
+      },
+      "ResultPath": "$.escalation",
+      "Next": "ReValidateOrder"
+    },
+    "ReValidateOrder": {
+      "Type": "Task",
+      "Resource": "${ValidateManufacturingOrderFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 3, "MaxAttempts": 3 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "EscalationFailed" }],
+      "Next": "WaitForReworkCompletion"
+    },
+    "WaitForReworkCompletion": {
+      "Type": "Wait",
+      "Seconds": 5,
+      "Next": "ReinspectAndRetest"
+    },
+    "ReinspectAndRetest": {
+      "Type": "Parallel",
+      "Branches": [
+        {
+          "StartAt": "ReinspectComponents",
+          "States": {
+            "ReinspectComponents": {
+              "Type": "Task",
+              "Resource": "${InspectComponentsFunctionArn}",
+              "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+              "End": true
+            }
+          }
+        },
+        {
+          "StartAt": "RerunStructuralTest",
+          "States": {
+            "RerunStructuralTest": {
+              "Type": "Task",
+              "Resource": "${RunStructuralTestFunctionArn}",
+              "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+              "End": true
+            }
+          }
+        }
+      ],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "EscalationFailed" }],
+      "Next": "RecertifyVehicle"
+    },
+    "RecertifyVehicle": {
+      "Type": "Task",
+      "Resource": "${CertifyVehicleFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "EscalationFailed" }],
+      "Next": "EvaluateRecertification"
+    },
+    "EvaluateRecertification": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "Variable": "$.certificationStatus",
+          "StringEquals": "FLIGHT_READY",
+          "Next": "EscalationResolved"
+        }
+      ],
+      "Default": "EscalationFailed"
+    },
+    "EscalationResolved": {
+      "Type": "Succeed"
+    },
+    "EscalationFailed": {
+      "Type": "Fail",
+      "Error": "ManufacturingDefectUnresolved",
+      "Cause": "Vehicle could not be recertified after defect rework"
+    }
+  }
+}

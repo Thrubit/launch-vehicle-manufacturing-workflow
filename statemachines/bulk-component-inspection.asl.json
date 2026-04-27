@@ -1,0 +1,64 @@
+{
+  "Comment": "Bulk Component Inspection - process multiple vehicle production lots concurrently",
+  "StartAt": "ProcessProductionLots",
+  "States": {
+    "ProcessProductionLots": {
+      "Type": "Map",
+      "ItemsPath": "$.productionLots",
+      "MaxConcurrency": 3,
+      "ItemProcessor": {
+        "ProcessorConfig": { "Mode": "INLINE" },
+        "StartAt": "ValidateOrder",
+        "States": {
+          "ValidateOrder": {
+            "Type": "Task",
+            "Resource": "${ValidateManufacturingOrderFunctionArn}",
+            "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+            "Next": "InspectAndAssemble"
+          },
+          "InspectAndAssemble": {
+            "Type": "Parallel",
+            "Branches": [
+              {
+                "StartAt": "InspectComponents",
+                "States": {
+                  "InspectComponents": {
+                    "Type": "Task",
+                    "Resource": "${InspectComponentsFunctionArn}",
+                    "End": true
+                  }
+                }
+              },
+              {
+                "StartAt": "AssembleStage",
+                "States": {
+                  "AssembleStage": {
+                    "Type": "Task",
+                    "Resource": "${AssembleStageFunctionArn}",
+                    "End": true
+                  }
+                }
+              }
+            ],
+            "Next": "RunStructuralTest"
+          },
+          "RunStructuralTest": {
+            "Type": "Task",
+            "Resource": "${RunStructuralTestFunctionArn}",
+            "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 2, "MaxAttempts": 2 }],
+            "Next": "CertifyVehicle"
+          },
+          "CertifyVehicle": {
+            "Type": "Task",
+            "Resource": "${CertifyVehicleFunctionArn}",
+            "End": true
+          }
+        }
+      },
+      "Next": "BulkInspectionComplete"
+    },
+    "BulkInspectionComplete": {
+      "Type": "Succeed"
+    }
+  }
+}

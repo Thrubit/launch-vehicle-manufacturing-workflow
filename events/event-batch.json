@@ -1,0 +1,31 @@
+{
+  "productionLots": [
+    {
+      "orderId": "ORD-2026-SMALL-12",
+      "vehicleType": "SMALL_LV",
+      "customerId": "CUST-MICROSAT-004",
+      "contractRef": "CONTRACT-MS-2025-208",
+      "targetLaunchDate": "2027-03-01T00:00:00Z",
+      "payloadClass": "LEO_SMALLSAT",
+      "manufacturingFacility": "BOCA-CHICA-B"
+    },
+    {
+      "orderId": "ORD-2026-UPPER-03",
+      "vehicleType": "UPPER_STAGE",
+      "customerId": "CUST-GOVSAT-007",
+      "contractRef": "CONTRACT-GOV-2025-044",
+      "targetLaunchDate": "2027-05-10T00:00:00Z",
+      "payloadClass": "MEO_NAVIGATION",
+      "manufacturingFacility": "DECATUR-A"
+    },
+    {
+      "orderId": "ORD-2026-KICK-09",
+      "vehicleType": "KICK_STAGE",
+      "customerId": "CUST-DEEPSPACE-002",
+      "contractRef": "CONTRACT-DS-2025-071",
+      "targetLaunchDate": "2027-08-20T00:00:00Z",
+      "payloadClass": "INTERPLANETARY",
+      "manufacturingFacility": "HUNTSVILLE-C"
+    }
+  ]
+}

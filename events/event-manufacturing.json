@@ -1,0 +1,10 @@
+{
+  "orderId": "ORD-2026-NOVA-7",
+  "vehicleType": "MEDIUM_LV",
+  "customerId": "CUST-STARCOMM-001",
+  "contractRef": "CONTRACT-SC-2025-114",
+  "targetLaunchDate": "2027-06-15T00:00:00Z",
+  "payloadClass": "GEO_COMSAT",
+  "manufacturingFacility": "HAWTHORNE-A",
+  "operatorId": "MFG-ENG-4421"
+}

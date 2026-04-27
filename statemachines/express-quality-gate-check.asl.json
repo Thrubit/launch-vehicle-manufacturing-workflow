@@ -1,0 +1,65 @@
+{
+  "Comment": "Express Quality Gate Check - rapid pre-qualification before entering full manufacturing pipeline",
+  "StartAt": "SetQualityGateContext",
+  "States": {
+    "SetQualityGateContext": {
+      "Type": "Pass",
+      "Parameters": {
+        "gateCheckId.$": "States.Format('QG-{}', $$.Execution.Name)",
+        "vehicleType.$": "$.vehicleType",
+        "orderId.$": "$.orderId",
+        "originalOrder.$": "$"
+      },
+      "ResultPath": "$.qualityGateContext",
+      "Next": "ValidateManufacturingOrder"
+    },
+    "ValidateManufacturingOrder": {
+      "Type": "Task",
+      "Resource": "${ValidateManufacturingOrderFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 1, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "QualityGateFailed" }],
+      "Next": "InspectComponents"
+    },
+    "InspectComponents": {
+      "Type": "Task",
+      "Resource": "${InspectComponentsFunctionArn}",
+      "Retry": [{ "ErrorEquals": ["States.ALL"], "IntervalSeconds": 1, "MaxAttempts": 2 }],
+      "Catch": [{ "ErrorEquals": ["States.ALL"], "Next": "QualityGateFailed" }],
+      "Next": "WaitForQualityDecision"
+    },
+    "WaitForQualityDecision": {
+      "Type": "Wait",
+      "Seconds": 2,
+      "Next": "EvaluateQualityGate"
+    },
+    "EvaluateQualityGate": {
+      "Type": "Choice",
+      "Choices": [
+        {
+          "And": [
+            { "Variable": "$.orderStatus", "StringEquals": "VALIDATED" },
+            { "Variable": "$.inspectionStatus", "StringEquals": "PASSED" }
+          ],
+          "Next": "QualityGatePassed"
+        },
+        {
+          "Variable": "$.inspectionStatus",
+          "StringEquals": "FAILED",
+          "Next": "QualityGateHold"
+        }
+      ],
+      "Default": "QualityGateFailed"
+    },
+    "QualityGatePassed": {
+      "Type": "Succeed"
+    },
+    "QualityGateHold": {
+      "Type": "Succeed"
+    },
+    "QualityGateFailed": {
+      "Type": "Fail",
+      "Error": "QualityGateRejected",
+      "Cause": "Vehicle manufacturing order did not pass quality gate checks"
+    }
+  }
+}

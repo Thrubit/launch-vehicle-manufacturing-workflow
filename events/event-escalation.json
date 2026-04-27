@@ -1,0 +1,13 @@
+{
+  "orderId": "ORD-2026-HEAVY-02",
+  "vehicleType": "HEAVY_LV",
+  "customerId": "CUST-NATL-SEC-009",
+  "contractRef": "CONTRACT-NS-2024-201",
+  "targetLaunchDate": "2027-02-01T00:00:00Z",
+  "payloadClass": "NRO_CLASSIFIED",
+  "manufacturingFacility": "CAPE-CANAVERAL-SLC",
+  "defectCategory": "STRUCTURAL_WELD_NCR",
+  "defectDescription": "NDT inspection identified subsurface porosity in interstage weld seam #14. Non-conformance report NCR-2026-0412 raised. Rework authorized by MRB board.",
+  "ncrReference": "NCR-2026-0412",
+  "reworkApprovalId": "MRB-APPROVAL-0412"
+}

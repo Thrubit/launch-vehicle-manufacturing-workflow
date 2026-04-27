@@ -1,0 +1,9 @@
+{
+  "orderId": "ORD-2026-REUSE-05",
+  "vehicleType": "REUSABLE_FIRST_STAGE",
+  "customerId": "CUST-COMMERCIAL-014",
+  "contractRef": "CONTRACT-COM-2026-003",
+  "targetLaunchDate": "2026-11-30T00:00:00Z",
+  "payloadClass": "LEO_CLUSTER",
+  "manufacturingFacility": "MCGREGOR-TEST"
+}
